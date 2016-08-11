@@ -1,0 +1,86 @@
+---
+# Used to install mqsql on specified servers
+#
+# Description - Install Mysql with basic configuration
+
+   - name: Add passworrd.yml file 
+     include_vars: password.yml 
+   
+   - name: Add mysql group
+     group: name=mysql state=present 
+
+   - name: create mysql app directory 
+     file: path=/apps/Oracle/ state=directory
+
+   - name: Add mysql user
+     user: name=mysql group=mysql createhome=yes home=/apps/Oracle/mysql state=present password="{{ mysqlpassword | password_hash('sha512') }}"
+    
+   - name: Create mysql_installbits directory 
+     file: path=/apps/mysql_installbits mode=0777 state=directory
+
+   - name: copy the mysql archive 
+     copy: src={{ mysql_archive }} dest=/apps/mysql_installbits/{{ mysql_archive }} mode=0777
+
+   - name: Extract mysql archive 
+     command: 'tar -xf /apps/mysql_installbits/{{ mysql_archive }} -C /apps/Oracle/' 
+
+   - name: Move the extracted files to MySQL home 
+     shell: mv /apps/Oracle/mysql-advanced-5.6.27-linux-glibc2.5-x86_64/* /apps/Oracle/mysql/
+
+   - name: Remove mysql-advanced directory 
+     file: path=/apps/Oracle/mysql-advanced-5.6.27-linux-glibc2.5-x86_64 state=absent 
+
+   - name: Change the permission of mysql 
+     file: path=/apps/Oracle/mysql/ owner=root group=mysql mode=0775 recurse=yes
+
+   - name: Move README to docs directory 
+     command: mv /apps/Oracle/mysql/README /apps/Oracle/mysql/docs/ 
+   - name: Move License to docs directory 
+     command: mv /apps/Oracle/mysql/LICENSE.mysql /apps/Oracle/mysql/docs
+
+   - name: Create director under mysql 
+     file: dest=/apps/Oracle/mysql/{{ item }} owner=root group=mysql mode=0775 state=directory
+     with_items:
+        - socket
+        - pid
+        - archive
+        - backup 
+        - bin-logs 
+        - logs 
+
+   - name: remove my.cnf file 
+     file: path=/etc/my.cnf state=absent 
+
+   - name: copy the new my.cnf file
+     copy: src=files/my.cnf dest=/etc/my.cnf owner=root group=mysql 
+   
+   - name: create my.cnf directory sym link 
+     file: src=/etc/my.cnf dest=/apps/Oracle/mysql/my.cnf state=link
+
+   - name: change the permissions before installing mysql 
+     file: path=/apps/Oracle/mysql/ owner=mysql group=mysql mode=0775 recurse=yes
+ 
+   - name: Execute mysql scripts 
+     shell: cd /apps/Oracle/mysql/ ; /apps/Oracle/mysql/scripts/mysql_install_db --user=mysql
+
+   - name: change the permissions after installing mysql
+     file: path=/apps/Oracle/mysql/ owner=root group=mysql mode=0775 recurse=yes
+ 
+   - name: change the permissions after installing mysql
+     file: path=/apps/Oracle/mysql/data owner=mysql group=mysql mode=0775
+   
+   - name: change the permissions for .bash_profile
+     file: path=/apps/Oracle/mysql/.bash_profile owner=mysql group=mysql mode=0775
+
+   - name: change the permissions for .bashrc
+     file: path=/apps/Oracle/mysql/.bashrc owner=mysql group=mysql mode=0775
+
+   - name: copy mysql.server file
+     copy: src=files/mysql.server  dest=/etc/init.d/mysql owner=root group=root mode=0775 
+
+   - name: start mysql service 
+     service: name=mysql state=started enabled=yes
+    
+   - name: Set Version name 
+     shell: echo mysql-advanced-5.6.27-linux-glibc2.5-x86_64 >> /apps/Oracle/mysql/version.txt
+  

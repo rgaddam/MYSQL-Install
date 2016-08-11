@@ -1,0 +1,5 @@
+---
+# vars file for mysql
+mysql_archive: mysql-advanced-5.6.27-linux-glibc2.5-x86_64.tar
+mysql_archive_path: /apps/Oracle/mysql-advanced-5.6.27-linux-glibc2.5-x86_64
+

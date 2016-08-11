@@ -1,0 +1,7 @@
+---
+- hosts: weblogic-test
+  gather_facts: true
+  roles:
+  - mysql-install
+  - mysql-meb
+  - mysql-db

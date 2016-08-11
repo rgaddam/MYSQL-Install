@@ -1,0 +1,57 @@
+---
+# Used to install the meb on specified servers
+#
+
+   - name: Copy the meb archiver
+     copy: src={{ meb_archive }} dest=/apps/mysql_installbits/ mode=0777
+
+   - name: Extract meb archiver
+     command: 'tar -xf /apps/mysql_installbits/{{ meb_archive }} -C /apps/Oracle/mysql'
+
+   - name: Move the extracted files to Meb directory
+     command: creates="{{ meb_path }}" mv /apps/Oracle/mysql/meb-3.12.1-el6-x86-64bit {{ meb_path }}
+ 
+   - name: Change the permission of meb
+     file: path={{ meb_path }} owner=root group=mysql mode=0775 recurse=yes
+
+   - name: Create director under meb
+     file: dest=/apps/Oracle/mysql/meb/{{ item }} owner=root group=mysql mode=0775 state=directory
+     with_items:
+        - scripts
+        - docs    
+        - archive
+        - logs
+        - backup-tmp
+        - backups
+  
+   - name: Move README to docs directory
+     command: mv {{ meb_path}}README.txt {{ meb_path }}docs/
+   - name: Move License to docs directory
+     command: mv {{ meb_path }}LICENSE.mysql {{ meb_path }}docs/
+   - name: Move mvl.css to docs directory
+     command: mv {{ meb_path }}mvl.css {{ meb_path }}docs/
+   - name: Move manual to docs directory
+     command: mv {{ meb_path }}manual.html {{ meb_path }}docs
+
+   - name: Copy the version name
+     shell: echo meb-3.12.1-el6-x86-64bit >> {{ meb_path }}version.txt
+  
+   - name: Copy the Purge script
+     copy: src=purge_meb.pl dest={{ meb_path }}scripts/ owner=root group=mysql mode=0775 
+   - name: Copy med script
+     copy: src=meb.pl dest={{ meb_path }}scripts/ owner=root group=mysql mode=0775
+  
+   - name: Update mysql use to cron.allow 
+     lineinfile: dest=/etc/cron.allow regexp='^' line=mysql state=present create=true
+
+   - name: Cron to Run Mysql backups
+     cron: minute="03" hour="22"
+           user="mysql"
+           name="Run Mysql backups"
+           job="/apps/oracle/mysql/.bash_profile ; /usr/bin/perl /apps/oracle/mysql/meb/scripts/meb.pl root mysql123 >/dev/null 2>&1"
+
+   - name: Cron to rum purge script 
+     cron: minute="03" hour="20"
+           user="mysql"
+           name="Purge old backup"
+           job="/apps/oracle/mysql/.bash_profile ; /usr/bin/perl /apps/oracle/mysql/meb/scripts/purge_meb.pl 2 >/dev/null 2>&1"
