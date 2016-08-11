@@ -1,16 +1,23 @@
 ---
-# tasks file for mysql-db
-
-   - name: install MYSQL-python 
+   - name: install MYSQL-python
      yum: name=MySQL-python
-  
-   - name: copy my.cnf file 
-     copy: src=my.cnf dest=/root/.my.cnf mode=0600
- 
-   - name: Set mysql user password
-     mysql_user: name=mysql host="{{ item }}" password="{{ mysql_password }}" priv=*.*:ALL
+
+   - name: Ensure MYSQL service is started
+     action: service name=mysql state=started
+
+   - name: copy my.cnf file
+     copy: src=my.cnf dest=/root/.my.cnf mode=0600 owner=root
+
+   - name: update root user password
+     mysql_user: name=root host="{{ item }}" password="{{ mysql_root_password }}" priv=*.*:ALL
      with_items:
+        - "{{ ansible_fqdn }}"
         - "localhost"
         - "127.0.0.1"
         - "::1"
-        - "{{ ansible_fqdn }}"
+
+   - name: Ensure anonymous users are not in the database
+     mysql_user: name='' host={{ item }} state=absent
+     with_items:
+       - localhost
+       - "{{ inventory_hostname }}"
